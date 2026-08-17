@@ -1,34 +1,11 @@
 "use strict";
 
-/*
- * Vercel Serverless Function
- *
- * Receives the Pi access token from the browser.
- *
- * The token is validated directly against:
- *
- * GET https://api.minepi.com/v2/me
- *
- * No Pi Network API key is required for this flow.
- */
+const crypto =
+  require("crypto");
 
-const crypto = require("crypto");
 
 const PI_ME_ENDPOINT =
   "https://api.minepi.com/v2/me";
-
-
-function sendJson(res, statusCode, payload) {
-
-  res.status(statusCode);
-
-  res.setHeader(
-    "Content-Type",
-    "application/json"
-  );
-
-  res.json(payload);
-}
 
 
 function getSessionSecret() {
@@ -39,182 +16,258 @@ function getSessionSecret() {
   if (!secret) {
 
     throw new Error(
-      "SESSION_SECRET environment variable is not configured."
+      "SESSION_SECRET is not configured."
     );
+
   }
 
   return secret;
+
 }
 
 
-function createSessionToken(user) {
-
-  const secret =
-    getSessionSecret();
+function createSessionToken(
+  user
+) {
 
   const payload = {
-    uid: user.uid,
-    username: user.username,
-    createdAt: Date.now()
+
+    uid:
+      user.uid,
+
+    username:
+      user.username,
+
+    createdAt:
+      Date.now()
+
   };
 
+
   const encodedPayload =
-    Buffer.from(
-      JSON.stringify(payload),
-      "utf8"
-    ).toString("base64url");
+    Buffer
+      .from(
+        JSON.stringify(
+          payload
+        )
+      )
+      .toString(
+        "base64url"
+      );
+
 
   const signature =
     crypto
       .createHmac(
         "sha256",
-        secret
+        getSessionSecret()
       )
-      .update(encodedPayload)
-      .digest("base64url");
+      .update(
+        encodedPayload
+      )
+      .digest(
+        "base64url"
+      );
+
 
   return `${encodedPayload}.${signature}`;
+
 }
 
 
-module.exports = async function handler(req, res) {
+function setSessionCookie(
+  res,
+  token
+) {
 
-  if (req.method !== "POST") {
+  res.setHeader(
+    "Set-Cookie",
 
-    res.setHeader(
-      "Allow",
-      "POST"
-    );
+    [
+      `pi_session=${encodeURIComponent(token)}`,
+      "Path=/",
+      "HttpOnly",
+      "Secure",
+      "SameSite=Lax",
+      "Max-Age=604800"
+    ].join("; ")
+  );
 
-    return sendJson(
-      res,
-      405,
-      {
-        error: "Method not allowed."
-      }
-    );
-  }
+}
 
-  try {
 
-    const {
-      accessToken
-    } = req.body || {};
+module.exports =
+  async function handler(
+    req,
+    res
+  ) {
 
     if (
-      typeof accessToken !== "string" ||
-      accessToken.trim().length === 0
+      req.method !== "POST"
     ) {
 
-      return sendJson(
-        res,
-        400,
-        {
-          error: "Pi access token is required."
-        }
+      res.setHeader(
+        "Allow",
+        "POST"
       );
+
+      return res
+        .status(405)
+        .json({
+          error:
+            "Method not allowed."
+        });
+
     }
 
-    /*
-     * Server-side Pi token validation.
-     *
-     * IMPORTANT:
-     * Never trust username/uid data sent by the browser.
-     * The identity comes from this verified Pi API response.
-     */
-    const piResponse =
-      await fetch(
-        PI_ME_ENDPOINT,
-        {
-          method: "GET",
 
-          headers: {
-            Authorization:
-              `Bearer ${accessToken}`
+    try {
+
+      const {
+        accessToken
+      } =
+        req.body || {};
+
+
+      if (
+        typeof accessToken !==
+          "string" ||
+        accessToken.length ===
+          0
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            error:
+              "Pi access token is required."
+          });
+
+      }
+
+
+      /*
+       * SECURITY:
+       *
+       * Never trust the username or UID supplied
+       * by the browser.
+       *
+       * Pi Network is the source of truth.
+       */
+      const piResponse =
+        await fetch(
+          PI_ME_ENDPOINT,
+          {
+            method:
+              "GET",
+
+            headers: {
+              Authorization:
+                `Bearer ${accessToken}`,
+
+              Accept:
+                "application/json"
+            }
           }
-        }
-      );
+        );
 
-    if (!piResponse.ok) {
 
-      return sendJson(
+      const piData =
+        await piResponse.json();
+
+
+      if (
+        !piResponse.ok
+      ) {
+
+        console.error(
+          "Pi /v2/me rejected token:",
+          piResponse.status,
+          piData
+        );
+
+
+        return res
+          .status(401)
+          .json({
+            error:
+              "Pi access token could not be verified."
+          });
+
+      }
+
+
+      if (
+        !piData ||
+        !piData.uid ||
+        !piData.username
+      ) {
+
+        return res
+          .status(401)
+          .json({
+            error:
+              "Pi returned an invalid user."
+          });
+
+      }
+
+
+      /*
+       * Establish our own application session only
+       * after Pi has verified the access token.
+       */
+      const sessionToken =
+        createSessionToken({
+          uid:
+            piData.uid,
+
+          username:
+            piData.username
+        });
+
+
+      setSessionCookie(
         res,
-        401,
-        {
-          error:
-            "Pi access token validation failed."
-        }
+        sessionToken
       );
+
+
+      return res
+        .status(200)
+        .json({
+
+          authenticated:
+            true,
+
+          user: {
+
+            uid:
+              piData.uid,
+
+            username:
+              piData.username
+
+          }
+
+        });
+
+
+    } catch (error) {
+
+      console.error(
+        "Pi authentication error:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+          error:
+            "Unable to authenticate with Pi Network."
+        });
+
     }
 
-    const piUser =
-      await piResponse.json();
-
-    if (
-      !piUser ||
-      typeof piUser.uid !== "string" ||
-      typeof piUser.username !== "string"
-    ) {
-
-      return sendJson(
-        res,
-        401,
-        {
-          error:
-            "Pi returned an invalid user identity."
-        }
-      );
-    }
-
-    /*
-     * At this point Pi has confirmed the identity.
-     * Establish an application session.
-     */
-    const sessionToken =
-      createSessionToken({
-        uid: piUser.uid,
-        username: piUser.username
-      });
-
-    res.setHeader(
-      "Set-Cookie",
-      [
-        `pi_session=${sessionToken}`,
-        "HttpOnly",
-        "Secure",
-        "SameSite=Lax",
-        "Path=/",
-        "Max-Age=604800"
-      ].join("; ")
-    );
-
-    return sendJson(
-      res,
-      200,
-      {
-        authenticated: true,
-
-        user: {
-          uid: piUser.uid,
-          username: piUser.username
-        }
-      }
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Pi authentication backend error:",
-      error
-    );
-
-    return sendJson(
-      res,
-      500,
-      {
-        error:
-          "Unable to establish Pi session."
-      }
-    );
-  }
-};
+  };
