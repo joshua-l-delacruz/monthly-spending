@@ -3,45 +3,155 @@
 /*
  * Pi Monthly Spending
  *
- * Pi Network authentication flow:
+ * Product:
+ * Premium Spending Analytics
  *
- * 1. Wait for Pi.init() to fully resolve.
- * 2. Call Pi.authenticate(['username']).
- * 3. Send the returned accessToken to /api/auth/login.
- * 4. Backend validates the token against Pi /v2/me.
- * 5. Backend establishes an HttpOnly session cookie.
+ * Price:
+ * 1 Pi
+ *
+ * Duration:
+ * 30 days
+ *
+ * Memo:
+ * Unlock premium spending analytics for 30 days
  */
 
-const STORAGE_KEY = "pi-monthly-spending-expenses";
-const BUDGET_KEY = "pi-monthly-spending-budget";
 
-const monthSelector = document.getElementById("monthSelector");
+const STORAGE_KEY =
+  "pi-monthly-spending-expenses";
 
-const totalSpentElement = document.getElementById("totalSpent");
-const monthlyBudgetElement = document.getElementById("monthlyBudget");
-const remainingBudgetElement = document.getElementById("remainingBudget");
-const transactionCountElement = document.getElementById("transactionCount");
+const BUDGET_KEY =
+  "pi-monthly-spending-budget";
 
-const expenseList = document.getElementById("expenseList");
-const categoryList = document.getElementById("categoryList");
 
-const addExpenseButton = document.getElementById("addExpenseButton");
-const closeModalButton = document.getElementById("closeModalButton");
-const cancelExpenseButton = document.getElementById("cancelExpenseButton");
+const PREMIUM_PRODUCT = Object.freeze({
 
-const expenseModal = document.getElementById("expenseModal");
-const expenseForm = document.getElementById("expenseForm");
-const expenseDate = document.getElementById("expenseDate");
+  productId:
+    "premium-spending-analytics-30d",
 
-const signInButton = document.getElementById("signInButton");
-const userProfile = document.getElementById("userProfile");
-const usernameDisplay = document.getElementById("usernameDisplay");
-const authStatus = document.getElementById("authStatus");
+  productName:
+    "Premium Spending Analytics",
 
-let piInitialized = false;
-let currentUser = null;
+  amount:
+    1,
+
+  memo:
+    "Unlock premium spending analytics for 30 days",
+
+  durationDays:
+    30
+
+});
+
+
+const monthSelector =
+  document.getElementById(
+    "monthSelector"
+  );
+
+const totalSpentElement =
+  document.getElementById(
+    "totalSpent"
+  );
+
+const monthlyBudgetElement =
+  document.getElementById(
+    "monthlyBudget"
+  );
+
+const remainingBudgetElement =
+  document.getElementById(
+    "remainingBudget"
+  );
+
+const transactionCountElement =
+  document.getElementById(
+    "transactionCount"
+  );
+
+
+const expenseList =
+  document.getElementById(
+    "expenseList"
+  );
+
+const categoryList =
+  document.getElementById(
+    "categoryList"
+  );
+
+
+const addExpenseButton =
+  document.getElementById(
+    "addExpenseButton"
+  );
+
+const closeModalButton =
+  document.getElementById(
+    "closeModalButton"
+  );
+
+const cancelExpenseButton =
+  document.getElementById(
+    "cancelExpenseButton"
+  );
+
+
+const expenseModal =
+  document.getElementById(
+    "expenseModal"
+  );
+
+const expenseForm =
+  document.getElementById(
+    "expenseForm"
+  );
+
+const expenseDate =
+  document.getElementById(
+    "expenseDate"
+  );
+
+
+const signInButton =
+  document.getElementById(
+    "signInButton"
+  );
+
+const userProfile =
+  document.getElementById(
+    "userProfile"
+  );
+
+const usernameDisplay =
+  document.getElementById(
+    "usernameDisplay"
+  );
+
+const authStatus =
+  document.getElementById(
+    "authStatus"
+  );
+
+
+const premiumButton =
+  document.getElementById(
+    "premiumButton"
+  );
+
+
+let piInitialized =
+  false;
+
+let piAuth =
+  null;
+
+let currentUser =
+  null;
+
 
 const categories = [
+
   "Food",
   "Housing",
   "Utilities",
@@ -52,306 +162,527 @@ const categories = [
   "Entertainment",
   "Bills",
   "Other"
+
 ];
 
 
-function getToday() {
-  const date = new Date();
+/* =========================================================
+   DATE / STORAGE
+========================================================= */
 
-  return date.toISOString().split("T")[0];
+function getToday() {
+
+  const date =
+    new Date();
+
+  return date
+    .toISOString()
+    .split("T")[0];
+
 }
 
 
 function getCurrentMonth() {
-  const date = new Date();
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const date =
+    new Date();
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
 
   return `${year}-${month}`;
+
 }
 
 
 function loadExpenses() {
+
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+
+    const stored =
+      localStorage.getItem(
+        STORAGE_KEY
+      );
 
     if (!stored) {
       return [];
     }
 
-    const expenses = JSON.parse(stored);
+    const expenses =
+      JSON.parse(stored);
 
-    return Array.isArray(expenses) ? expenses : [];
+    return Array.isArray(expenses)
+      ? expenses
+      : [];
 
   } catch (error) {
 
-    console.error("Unable to load expenses:", error);
+    console.error(
+      "Unable to load expenses:",
+      error
+    );
 
     return [];
+
   }
+
 }
 
 
 function saveExpenses(expenses) {
+
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify(expenses)
   );
+
 }
 
 
 function loadBudget() {
+
   try {
-    const stored = localStorage.getItem(BUDGET_KEY);
+
+    const stored =
+      localStorage.getItem(
+        BUDGET_KEY
+      );
 
     if (!stored) {
       return 0;
     }
 
-    const budget = Number(stored);
+    const budget =
+      Number(stored);
 
-    return Number.isFinite(budget) ? budget : 0;
+    return Number.isFinite(budget)
+      ? budget
+      : 0;
 
   } catch (error) {
 
-    console.error("Unable to load budget:", error);
+    console.error(
+      "Unable to load budget:",
+      error
+    );
 
     return 0;
+
   }
+
 }
 
 
 function formatCurrency(amount) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP"
-  }).format(amount);
+
+  return new Intl.NumberFormat(
+    "en-PH",
+    {
+      style: "currency",
+      currency: "PHP"
+    }
+  ).format(amount);
+
 }
 
 
 function getSelectedMonth() {
-  return monthSelector.value || getCurrentMonth();
+
+  return (
+    monthSelector.value ||
+    getCurrentMonth()
+  );
+
 }
 
 
 function getMonthlyExpenses() {
-  const selectedMonth = getSelectedMonth();
 
-  return loadExpenses().filter((expense) => {
-    return expense.date.startsWith(selectedMonth);
-  });
+  const selectedMonth =
+    getSelectedMonth();
+
+  return loadExpenses().filter(
+    (expense) =>
+      expense.date.startsWith(
+        selectedMonth
+      )
+  );
+
 }
 
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
 
 function updateDashboard() {
 
-  const expenses = getMonthlyExpenses();
+  const expenses =
+    getMonthlyExpenses();
 
-  const total = expenses.reduce(
-    (sum, expense) => sum + Number(expense.amount),
-    0
-  );
+  const total =
+    expenses.reduce(
+      (sum, expense) =>
+        sum + Number(expense.amount),
+      0
+    );
 
-  const budget = loadBudget();
+  const budget =
+    loadBudget();
 
-  const remaining = budget - total;
+  const remaining =
+    budget - total;
 
-  totalSpentElement.textContent = formatCurrency(total);
+
+  totalSpentElement.textContent =
+    formatCurrency(total);
+
 
   monthlyBudgetElement.textContent =
-    budget > 0 ? formatCurrency(budget) : "Not set";
+    budget > 0
+      ? formatCurrency(budget)
+      : "Not set";
+
 
   remainingBudgetElement.textContent =
-    budget > 0 ? formatCurrency(remaining) : "—";
-
-  transactionCountElement.textContent = expenses.length;
-
-  renderExpenses(expenses);
-  renderCategories(expenses);
-}
+    budget > 0
+      ? formatCurrency(remaining)
+      : "—";
 
 
-function renderExpenses(expenses) {
+  transactionCountElement.textContent =
+    expenses.length;
 
-  if (expenses.length === 0) {
 
-    expenseList.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">₱</div>
-
-        <h3>No expenses yet</h3>
-
-        <p>
-          Add your first expense to start tracking your monthly spending.
-        </p>
-      </div>
-    `;
-
-    return;
-  }
-
-  const sortedExpenses = [...expenses].sort(
-    (a, b) => new Date(b.date) - new Date(a.date)
+  renderExpenses(
+    expenses
   );
 
-  expenseList.innerHTML = sortedExpenses
-    .map((expense) => {
+  renderCategories(
+    expenses
+  );
 
-      const description =
-        expense.description?.trim() ||
-        expense.category;
-
-      return `
-        <div class="expense-item">
-
-          <div class="expense-info">
-
-            <div class="expense-description">
-              ${escapeHtml(description)}
-            </div>
-
-            <div class="expense-meta">
-              ${escapeHtml(expense.category)}
-              ·
-              ${escapeHtml(expense.date)}
-              ·
-              ${escapeHtml(expense.paymentMethod)}
-            </div>
-
-          </div>
-
-          <div>
-
-            <div class="expense-amount">
-              ${formatCurrency(Number(expense.amount))}
-            </div>
-
-            <button
-              type="button"
-              class="delete-expense"
-              data-id="${escapeHtml(expense.id)}"
-            >
-              Delete
-            </button>
-
-          </div>
-
-        </div>
-      `;
-
-    })
-    .join("");
-
-  document
-    .querySelectorAll(".delete-expense")
-    .forEach((button) => {
-
-      button.addEventListener("click", () => {
-        deleteExpense(button.dataset.id);
-      });
-
-    });
 }
 
 
-function renderCategories(expenses) {
+/* =========================================================
+   EXPENSES
+========================================================= */
 
-  if (expenses.length === 0) {
+function renderExpenses(
+  expenses
+) {
 
-    categoryList.innerHTML = `
-      <div class="empty-state small">
-        <p>No category data yet.</p>
+  if (
+    expenses.length === 0
+  ) {
+
+    expenseList.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="empty-icon">
+          ₱
+        </div>
+
+        <h3>
+          No expenses yet
+        </h3>
+
+        <p>
+          Add your first expense to start
+          tracking your monthly spending.
+        </p>
+
       </div>
+
     `;
 
     return;
   }
+
+
+  const sortedExpenses =
+    [...expenses].sort(
+      (a, b) =>
+        new Date(b.date) -
+        new Date(a.date)
+    );
+
+
+  expenseList.innerHTML =
+    sortedExpenses
+      .map(
+        (expense) => {
+
+          const description =
+            expense.description?.trim() ||
+            expense.category;
+
+
+          return `
+
+            <div class="expense-item">
+
+              <div class="expense-info">
+
+                <div class="expense-description">
+                  ${escapeHtml(
+                    description
+                  )}
+                </div>
+
+                <div class="expense-meta">
+
+                  ${escapeHtml(
+                    expense.category
+                  )}
+
+                  ·
+
+                  ${escapeHtml(
+                    expense.date
+                  )}
+
+                  ·
+
+                  ${escapeHtml(
+                    expense.paymentMethod
+                  )}
+
+                </div>
+
+              </div>
+
+
+              <div>
+
+                <div class="expense-amount">
+
+                  ${formatCurrency(
+                    Number(
+                      expense.amount
+                    )
+                  )}
+
+                </div>
+
+
+                <button
+                  type="button"
+                  class="delete-expense"
+                  data-id="${escapeHtml(
+                    expense.id
+                  )}"
+                >
+                  Delete
+                </button>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
+
+
+  document
+    .querySelectorAll(
+      ".delete-expense"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          () =>
+            deleteExpense(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+}
+
+
+function renderCategories(
+  expenses
+) {
+
+  if (
+    expenses.length === 0
+  ) {
+
+    categoryList.innerHTML = `
+
+      <div class="empty-state small">
+        <p>
+          No category data yet.
+        </p>
+      </div>
+
+    `;
+
+    return;
+  }
+
 
   const totals = {};
 
-  categories.forEach((category) => {
-    totals[category] = 0;
-  });
 
-  expenses.forEach((expense) => {
+  categories.forEach(
+    (category) => {
 
-    const category = expense.category;
+      totals[category] =
+        0;
 
-    if (!totals[category]) {
-      totals[category] = 0;
     }
-
-    totals[category] += Number(expense.amount);
-  });
-
-  const totalSpent = Object.values(totals).reduce(
-    (sum, amount) => sum + amount,
-    0
   );
 
-  const sortedCategories = Object.entries(totals)
-    .filter(([, amount]) => amount > 0)
-    .sort((a, b) => b[1] - a[1]);
 
-  categoryList.innerHTML = sortedCategories
-    .map(([category, amount]) => {
+  expenses.forEach(
+    (expense) => {
 
-      const percentage =
-        totalSpent > 0
-          ? (amount / totalSpent) * 100
-          : 0;
+      const category =
+        expense.category;
 
-      return `
-        <div class="category-item">
+      if (
+        !totals[category]
+      ) {
+        totals[category] =
+          0;
+      }
 
-          <div class="category-header">
+      totals[category] +=
+        Number(
+          expense.amount
+        );
 
-            <span class="category-name">
-              ${escapeHtml(category)}
-            </span>
+    }
+  );
 
-            <span class="category-total">
-              ${formatCurrency(amount)}
-            </span>
 
-          </div>
+  const totalSpent =
+    Object.values(
+      totals
+    ).reduce(
+      (sum, amount) =>
+        sum + amount,
+      0
+    );
 
-          <div class="category-bar">
-            <div
-              class="category-bar-fill"
-              style="width: ${percentage}%"
-            ></div>
-          </div>
 
-        </div>
-      `;
+  const sortedCategories =
+    Object.entries(
+      totals
+    )
+      .filter(
+        ([, amount]) =>
+          amount > 0
+      )
+      .sort(
+        (a, b) =>
+          b[1] - a[1]
+      );
 
-    })
-    .join("");
+
+  categoryList.innerHTML =
+    sortedCategories
+      .map(
+        ([category, amount]) => {
+
+          const percentage =
+            totalSpent > 0
+              ? (
+                  amount /
+                  totalSpent
+                ) * 100
+              : 0;
+
+
+          return `
+
+            <div class="category-item">
+
+              <div class="category-header">
+
+                <span class="category-name">
+                  ${escapeHtml(
+                    category
+                  )}
+                </span>
+
+                <span class="category-total">
+                  ${formatCurrency(
+                    amount
+                  )}
+                </span>
+
+              </div>
+
+
+              <div class="category-bar">
+
+                <div
+                  class="category-bar-fill"
+                  style="width: ${percentage}%"
+                ></div>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
+
 }
 
 
+/* =========================================================
+   EXPENSE MODAL
+========================================================= */
+
 function openModal() {
 
-  expenseModal.classList.remove("hidden");
+  expenseModal.classList.remove(
+    "hidden"
+  );
 
   expenseModal.setAttribute(
     "aria-hidden",
     "false"
   );
 
-  expenseDate.value = getToday();
+  expenseDate.value =
+    getToday();
 
   document
-    .getElementById("expenseAmount")
+    .getElementById(
+      "expenseAmount"
+    )
     .focus();
+
 }
 
 
 function closeModal() {
 
-  expenseModal.classList.add("hidden");
+  expenseModal.classList.add(
+    "hidden"
+  );
 
   expenseModal.setAttribute(
     "aria-hidden",
@@ -360,7 +691,9 @@ function closeModal() {
 
   expenseForm.reset();
 
-  expenseDate.value = getToday();
+  expenseDate.value =
+    getToday();
+
 }
 
 
@@ -368,112 +701,275 @@ function addExpense(event) {
 
   event.preventDefault();
 
-  const formData = new FormData(expenseForm);
+  const formData =
+    new FormData(
+      expenseForm
+    );
 
-  const amount = Number(
-    formData.get("amount")
-  );
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const amount =
+    Number(
+      formData.get(
+        "amount"
+      )
+    );
 
-    alert("Please enter a valid expense amount.");
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+
+    alert(
+      "Please enter a valid expense amount."
+    );
 
     return;
   }
+
 
   const expense = {
 
     id:
       crypto.randomUUID
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random()}`,
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`,
 
     amount,
 
     category:
-      formData.get("category"),
+      formData.get(
+        "category"
+      ),
 
     description:
-      formData.get("description"),
+      formData.get(
+        "description"
+      ),
 
     date:
-      formData.get("date"),
+      formData.get(
+        "date"
+      ),
 
     paymentMethod:
-      formData.get("paymentMethod"),
+      formData.get(
+        "paymentMethod"
+      ),
 
     createdAt:
       new Date().toISOString()
 
   };
 
-  const expenses = loadExpenses();
 
-  expenses.push(expense);
+  const expenses =
+    loadExpenses();
 
-  saveExpenses(expenses);
+
+  expenses.push(
+    expense
+  );
+
+
+  saveExpenses(
+    expenses
+  );
+
 
   closeModal();
 
   updateDashboard();
+
 }
 
 
 function deleteExpense(id) {
 
-  const confirmed = window.confirm(
-    "Delete this expense?"
-  );
+  const confirmed =
+    window.confirm(
+      "Delete this expense?"
+    );
+
 
   if (!confirmed) {
     return;
   }
 
-  const expenses = loadExpenses().filter(
-    (expense) => expense.id !== id
+
+  const expenses =
+    loadExpenses().filter(
+      (expense) =>
+        expense.id !== id
+    );
+
+
+  saveExpenses(
+    expenses
   );
 
-  saveExpenses(expenses);
 
   updateDashboard();
+
 }
 
 
 function escapeHtml(value) {
 
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
 }
 
 
 /* =========================================================
-   PI NETWORK AUTHENTICATION
+   PI NETWORK
 ========================================================= */
 
 async function initializePi() {
 
   if (!window.Pi) {
+
     throw new Error(
       "Pi SDK is not available. Please open this app in Pi Browser."
     );
+
   }
 
-  /*
-   * IMPORTANT:
-   * Pi.init() is awaited before Pi.authenticate().
-   */
+
+  if (
+    piInitialized
+  ) {
+    return;
+  }
+
+
   await window.Pi.init({
     version: "2.0",
     sandbox: false
   });
 
-  piInitialized = true;
+
+  piInitialized =
+    true;
+
 }
 
+
+/*
+ * IMPORTANT:
+ *
+ * The authentication callback includes the incomplete
+ * payment handler because Pi requires interrupted
+ * payments to be resolved.
+ */
+async function onIncompletePaymentFound(
+  payment
+) {
+
+  console.warn(
+    "Incomplete Pi payment found:",
+    payment
+  );
+
+
+  const paymentId =
+    payment?.identifier;
+
+
+  if (!paymentId) {
+
+    console.error(
+      "Incomplete payment has no identifier."
+    );
+
+    return;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/payments/complete",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          credentials: "include",
+
+          body: JSON.stringify({
+            paymentId,
+
+            txid:
+              payment?.transaction?.txid ||
+              null
+          })
+
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.error ||
+        "Unable to complete incomplete payment."
+      );
+
+    }
+
+
+    console.log(
+      "Incomplete payment completed:",
+      result
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Incomplete payment completion failed:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   PI AUTHENTICATION
+========================================================= */
 
 async function authenticateWithPi() {
 
@@ -481,60 +977,90 @@ async function authenticateWithPi() {
     await initializePi();
   }
 
-  setAuthLoading(true);
+
+  setAuthLoading(
+    true
+  );
+
 
   try {
 
     /*
-     * Only request the username scope.
+     * payments scope is required because this application
+     * offers Premium Spending Analytics.
      */
-    const authResult = await window.Pi.authenticate(
-      ["username"],
-      onIncompletePaymentFound
-    );
+    const authResult =
+      await window.Pi.authenticate(
+        [
+          "username",
+          "payments"
+        ],
+        onIncompletePaymentFound
+      );
 
-    if (!authResult || !authResult.accessToken) {
+
+    if (
+      !authResult ||
+      !authResult.accessToken
+    ) {
+
       throw new Error(
         "Pi authentication did not return an access token."
       );
+
     }
 
-    /*
-     * Send the Pi access token to our backend.
-     *
-     * The backend validates it against:
-     * GET https://api.minepi.com/v2/me
-     */
-    const response = await fetch(
-      "/api/auth/login",
-      {
-        method: "POST",
 
-        headers: {
-          "Content-Type": "application/json"
-        },
+    const response =
+      await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
 
-        credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-        body: JSON.stringify({
-          accessToken: authResult.accessToken
-        })
-      }
-    );
+          credentials: "include",
 
-    const data = await response.json();
+          body: JSON.stringify({
+            accessToken:
+              authResult.accessToken
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
 
     if (!response.ok) {
+
       throw new Error(
-        data.error || "Unable to establish Pi session."
+        data.error ||
+        "Unable to establish Pi session."
       );
+
     }
 
-    currentUser = data.user;
 
-    updateAuthenticatedUI(currentUser);
+    currentUser =
+      data.user;
+
+    piAuth =
+      authResult;
+
+
+    updateAuthenticatedUI(
+      currentUser
+    );
+
 
     return currentUser;
+
 
   } catch (error) {
 
@@ -543,37 +1069,299 @@ async function authenticateWithPi() {
       error
     );
 
-    updateAuthError(error);
+
+    updateAuthError(
+      error
+    );
+
 
     throw error;
 
+
   } finally {
 
-    setAuthLoading(false);
+    setAuthLoading(
+      false
+    );
+
   }
+
 }
 
 
-function onIncompletePaymentFound(payment) {
+/* =========================================================
+   PI PAYMENT
+========================================================= */
 
-  console.warn(
-    "Incomplete Pi payment found:",
-    payment?.identifier
-  );
+async function purchasePremiumAnalytics() {
 
-  /*
-   * This application does not use Pi payments yet.
-   *
-   * This callback is retained because it is part of
-   * the Pi authentication flow and can be expanded
-   * when Pi payments are implemented.
-   */
+  if (!piInitialized) {
+
+    await initializePi();
+
+  }
+
+
+  if (!piAuth) {
+
+    try {
+
+      await authenticateWithPi();
+
+    } catch {
+
+      return;
+
+    }
+
+  }
+
+
+  if (!currentUser) {
+
+    alert(
+      "Please sign in with Pi first."
+    );
+
+    return;
+
+  }
+
+
+  premiumButton.disabled =
+    true;
+
+  premiumButton.textContent =
+    "Opening Pi Wallet...";
+
+
+  const paymentData = {
+
+    amount:
+      PREMIUM_PRODUCT.amount,
+
+    memo:
+      PREMIUM_PRODUCT.memo,
+
+    metadata: {
+
+      productId:
+        PREMIUM_PRODUCT.productId,
+
+      productName:
+        PREMIUM_PRODUCT.productName,
+
+      durationDays:
+        PREMIUM_PRODUCT.durationDays
+
+    }
+
+  };
+
+
+  const callbacks = {
+
+    /*
+     * Pi → our backend → Pi approval
+     */
+    onReadyForServerApproval:
+      async (
+        paymentId
+      ) => {
+
+        const response =
+          await fetch(
+            "/api/payments/approve",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              credentials: "include",
+
+              body: JSON.stringify({
+                paymentId
+              })
+
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
+            "Pi payment approval failed."
+          );
+
+        }
+
+
+        return result;
+
+      },
+
+
+    /*
+     * Pi → our backend → Pi completion
+     */
+    onReadyForServerCompletion:
+      async (
+        paymentId,
+        txid
+      ) => {
+
+        const response =
+          await fetch(
+            "/api/payments/complete",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              credentials: "include",
+
+              body: JSON.stringify({
+                paymentId,
+                txid
+              })
+
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
+            "Pi payment completion failed."
+          );
+
+        }
+
+
+        alert(
+          "🎉 Premium Spending Analytics unlocked for 30 days!"
+        );
+
+
+        return result;
+
+      },
+
+
+    onCancel:
+      (
+        paymentId
+      ) => {
+
+        console.log(
+          "Pi payment cancelled:",
+          paymentId
+        );
+
+        premiumButton.disabled =
+          false;
+
+        premiumButton.textContent =
+          "Buy Premium — 1 Pi";
+
+      },
+
+
+    onError:
+      (
+        error,
+        payment
+      ) => {
+
+        console.error(
+          "Pi payment error:",
+          error,
+          payment
+        );
+
+        premiumButton.disabled =
+          false;
+
+        premiumButton.textContent =
+          "Buy Premium — 1 Pi";
+
+        alert(
+          error?.message ||
+          "Pi payment failed."
+        );
+
+      }
+
+  };
+
+
+  try {
+
+    /*
+     * Pi.init() has already been awaited.
+     *
+     * This is a User-to-App payment.
+     */
+    await window.Pi.createPayment(
+      paymentData,
+      callbacks
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Unable to create Pi payment:",
+      error
+    );
+
+
+    alert(
+      error?.message ||
+      "Unable to start Pi payment."
+    );
+
+
+  } finally {
+
+    premiumButton.disabled =
+      false;
+
+    premiumButton.textContent =
+      "Buy Premium — 1 Pi";
+
+  }
+
 }
 
 
-function setAuthLoading(isLoading) {
+/* =========================================================
+   AUTH UI
+========================================================= */
 
-  signInButton.disabled = isLoading;
+function setAuthLoading(
+  isLoading
+) {
+
+  signInButton.disabled =
+    isLoading;
+
 
   if (isLoading) {
 
@@ -587,66 +1375,131 @@ function setAuthLoading(isLoading) {
 
     signInButton.textContent =
       "Sign in with Pi";
+
   }
+
 }
 
 
-function updateAuthenticatedUI(user) {
+function updateAuthenticatedUI(
+  user
+) {
 
   const username =
-    user?.username || "Pi User";
+    user?.username ||
+    "Pi User";
+
 
   usernameDisplay.textContent =
     `@${username}`;
 
-  userProfile.classList.remove("hidden");
 
-  signInButton.classList.add("hidden");
+  userProfile.classList.remove(
+    "hidden"
+  );
+
+
+  signInButton.classList.add(
+    "hidden"
+  );
+
 
   authStatus.textContent =
     `Signed in as @${username}`;
+
+
+  premiumButton.disabled =
+    false;
+
+
+  premiumButton.textContent =
+    "Buy Premium — 1 Pi";
+
 }
 
 
-function updateAuthError(error) {
+function updateAuthError(
+  error
+) {
 
-  userProfile.classList.add("hidden");
+  userProfile.classList.add(
+    "hidden"
+  );
 
-  signInButton.classList.remove("hidden");
+
+  signInButton.classList.remove(
+    "hidden"
+  );
+
+
+  premiumButton.disabled =
+    true;
+
+
+  premiumButton.textContent =
+    "Sign in to purchase";
+
 
   authStatus.textContent =
     error?.message ||
     "Pi authentication was not completed.";
+
 }
 
+
+/* =========================================================
+   EXISTING SESSION
+========================================================= */
 
 async function checkExistingSession() {
 
   try {
 
-    const response = await fetch(
-      "/api/auth/session",
-      {
-        method: "GET",
-        credentials: "include"
-      }
-    );
+    const response =
+      await fetch(
+        "/api/auth/session",
+        {
+          method: "GET",
+          credentials: "include"
+        }
+      );
+
 
     if (!response.ok) {
       return false;
     }
 
-    const data = await response.json();
 
-    if (!data.authenticated || !data.user) {
+    const data =
+      await response.json();
+
+
+    if (
+      !data.authenticated ||
+      !data.user
+    ) {
+
       return false;
+
     }
 
-    currentUser = data.user;
 
-    updateAuthenticatedUI(currentUser);
+    currentUser =
+      data.user;
 
+
+    updateAuthenticatedUI(
+      currentUser
+    );
+
+
+    /*
+     * We still authenticate with Pi when payment access
+     * is needed because the browser must have a Pi payment
+     * authorization scope.
+     */
     return true;
+
 
   } catch (error) {
 
@@ -656,45 +1509,40 @@ async function checkExistingSession() {
     );
 
     return false;
+
   }
+
 }
 
 
+/* =========================================================
+   STARTUP
+========================================================= */
+
 async function startPiAuthentication() {
 
-  /*
-   * First check whether our application already has
-   * a valid session.
-   */
-  const alreadyAuthenticated =
-    await checkExistingSession();
-
-  if (alreadyAuthenticated) {
-    return;
-  }
-
-  /*
-   * Automatically trigger Pi authentication when
-   * the application loads.
-   */
   try {
 
     await initializePi();
 
+    /*
+     * We intentionally authenticate automatically.
+     *
+     * The payments scope is requested because the app
+     * provides Premium Spending Analytics.
+     */
     await authenticateWithPi();
+
 
   } catch (error) {
 
-    /*
-     * Do not repeatedly force authentication after
-     * a user cancellation/error. The manual button
-     * remains available.
-     */
     console.warn(
       "Automatic Pi authentication did not complete:",
       error
     );
+
   }
+
 }
 
 
@@ -707,25 +1555,30 @@ addExpenseButton.addEventListener(
   openModal
 );
 
+
 closeModalButton.addEventListener(
   "click",
   closeModal
 );
+
 
 cancelExpenseButton.addEventListener(
   "click",
   closeModal
 );
 
+
 expenseForm.addEventListener(
   "submit",
   addExpense
 );
 
+
 monthSelector.addEventListener(
   "change",
   updateDashboard
 );
+
 
 signInButton.addEventListener(
   "click",
@@ -737,19 +1590,30 @@ signInButton.addEventListener(
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        error
+      );
 
     }
 
   }
 );
 
+
+premiumButton.addEventListener(
+  "click",
+  purchasePremiumAnalytics
+);
+
+
 document
-  .querySelector(".modal-backdrop")
+  .querySelector(
+    ".modal-backdrop"
+  )
   .addEventListener(
     "click",
     closeModal
-);
+  );
 
 
 /* =========================================================
@@ -759,12 +1623,15 @@ document
 monthSelector.value =
   getCurrentMonth();
 
+
 expenseDate.value =
   getToday();
 
+
 updateDashboard();
 
+
 /*
- * Start Pi authentication automatically.
+ * Automatically authenticate when the app loads.
  */
 startPiAuthentication();
