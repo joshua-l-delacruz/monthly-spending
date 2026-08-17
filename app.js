@@ -3,15 +3,13 @@
 /*
  * Pi Monthly Spending
  *
- * Initial frontend foundation.
+ * Pi Network authentication flow:
  *
- * This version stores expenses locally in the browser.
- * Later versions will connect this UI to:
- *
- * - Pi authentication
- * - Vercel API routes
- * - Neon PostgreSQL
- * - User-specific cloud data
+ * 1. Wait for Pi.init() to fully resolve.
+ * 2. Call Pi.authenticate(['username']).
+ * 3. Send the returned accessToken to /api/auth/login.
+ * 4. Backend validates the token against Pi /v2/me.
+ * 5. Backend establishes an HttpOnly session cookie.
  */
 
 const STORAGE_KEY = "pi-monthly-spending-expenses";
@@ -33,9 +31,15 @@ const cancelExpenseButton = document.getElementById("cancelExpenseButton");
 
 const expenseModal = document.getElementById("expenseModal");
 const expenseForm = document.getElementById("expenseForm");
-
 const expenseDate = document.getElementById("expenseDate");
 
+const signInButton = document.getElementById("signInButton");
+const userProfile = document.getElementById("userProfile");
+const usernameDisplay = document.getElementById("usernameDisplay");
+const authStatus = document.getElementById("authStatus");
+
+let piInitialized = false;
+let currentUser = null;
 
 const categories = [
   "Food",
@@ -218,6 +222,7 @@ function renderExpenses(expenses) {
           </div>
 
           <div>
+
             <div class="expense-amount">
               ${formatCurrency(Number(expense.amount))}
             </div>
@@ -229,6 +234,7 @@ function renderExpenses(expenses) {
             >
               Delete
             </button>
+
           </div>
 
         </div>
@@ -444,7 +450,257 @@ function escapeHtml(value) {
 }
 
 
-/* Event listeners */
+/* =========================================================
+   PI NETWORK AUTHENTICATION
+========================================================= */
+
+async function initializePi() {
+
+  if (!window.Pi) {
+    throw new Error(
+      "Pi SDK is not available. Please open this app in Pi Browser."
+    );
+  }
+
+  /*
+   * IMPORTANT:
+   * Pi.init() is awaited before Pi.authenticate().
+   */
+  await window.Pi.init({
+    version: "2.0",
+    sandbox: false
+  });
+
+  piInitialized = true;
+}
+
+
+async function authenticateWithPi() {
+
+  if (!piInitialized) {
+    await initializePi();
+  }
+
+  setAuthLoading(true);
+
+  try {
+
+    /*
+     * Only request the username scope.
+     */
+    const authResult = await window.Pi.authenticate(
+      ["username"],
+      onIncompletePaymentFound
+    );
+
+    if (!authResult || !authResult.accessToken) {
+      throw new Error(
+        "Pi authentication did not return an access token."
+      );
+    }
+
+    /*
+     * Send the Pi access token to our backend.
+     *
+     * The backend validates it against:
+     * GET https://api.minepi.com/v2/me
+     */
+    const response = await fetch(
+      "/api/auth/login",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        credentials: "include",
+
+        body: JSON.stringify({
+          accessToken: authResult.accessToken
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Unable to establish Pi session."
+      );
+    }
+
+    currentUser = data.user;
+
+    updateAuthenticatedUI(currentUser);
+
+    return currentUser;
+
+  } catch (error) {
+
+    console.error(
+      "Pi authentication failed:",
+      error
+    );
+
+    updateAuthError(error);
+
+    throw error;
+
+  } finally {
+
+    setAuthLoading(false);
+  }
+}
+
+
+function onIncompletePaymentFound(payment) {
+
+  console.warn(
+    "Incomplete Pi payment found:",
+    payment?.identifier
+  );
+
+  /*
+   * This application does not use Pi payments yet.
+   *
+   * This callback is retained because it is part of
+   * the Pi authentication flow and can be expanded
+   * when Pi payments are implemented.
+   */
+}
+
+
+function setAuthLoading(isLoading) {
+
+  signInButton.disabled = isLoading;
+
+  if (isLoading) {
+
+    signInButton.textContent =
+      "Signing in with Pi...";
+
+    authStatus.textContent =
+      "Waiting for Pi authentication...";
+
+  } else {
+
+    signInButton.textContent =
+      "Sign in with Pi";
+  }
+}
+
+
+function updateAuthenticatedUI(user) {
+
+  const username =
+    user?.username || "Pi User";
+
+  usernameDisplay.textContent =
+    `@${username}`;
+
+  userProfile.classList.remove("hidden");
+
+  signInButton.classList.add("hidden");
+
+  authStatus.textContent =
+    `Signed in as @${username}`;
+}
+
+
+function updateAuthError(error) {
+
+  userProfile.classList.add("hidden");
+
+  signInButton.classList.remove("hidden");
+
+  authStatus.textContent =
+    error?.message ||
+    "Pi authentication was not completed.";
+}
+
+
+async function checkExistingSession() {
+
+  try {
+
+    const response = await fetch(
+      "/api/auth/session",
+      {
+        method: "GET",
+        credentials: "include"
+      }
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (!data.authenticated || !data.user) {
+      return false;
+    }
+
+    currentUser = data.user;
+
+    updateAuthenticatedUI(currentUser);
+
+    return true;
+
+  } catch (error) {
+
+    console.warn(
+      "Unable to check existing session:",
+      error
+    );
+
+    return false;
+  }
+}
+
+
+async function startPiAuthentication() {
+
+  /*
+   * First check whether our application already has
+   * a valid session.
+   */
+  const alreadyAuthenticated =
+    await checkExistingSession();
+
+  if (alreadyAuthenticated) {
+    return;
+  }
+
+  /*
+   * Automatically trigger Pi authentication when
+   * the application loads.
+   */
+  try {
+
+    await initializePi();
+
+    await authenticateWithPi();
+
+  } catch (error) {
+
+    /*
+     * Do not repeatedly force authentication after
+     * a user cancellation/error. The manual button
+     * remains available.
+     */
+    console.warn(
+      "Automatic Pi authentication did not complete:",
+      error
+    );
+  }
+}
+
+
+/* =========================================================
+   EVENT LISTENERS
+========================================================= */
 
 addExpenseButton.addEventListener(
   "click",
@@ -471,18 +727,44 @@ monthSelector.addEventListener(
   updateDashboard
 );
 
+signInButton.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      await authenticateWithPi();
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  }
+);
+
 document
   .querySelector(".modal-backdrop")
   .addEventListener(
     "click",
     closeModal
-  );
+);
 
 
-/* Initial state */
+/* =========================================================
+   INITIAL STATE
+========================================================= */
 
-monthSelector.value = getCurrentMonth();
+monthSelector.value =
+  getCurrentMonth();
 
-expenseDate.value = getToday();
+expenseDate.value =
+  getToday();
 
 updateDashboard();
+
+/*
+ * Start Pi authentication automatically.
+ */
+startPiAuthentication();
