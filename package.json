@@ -1,0 +1,17 @@
+{
+  "name": "monthly-spending",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pi Monthly Spending - monthly expense tracking and Pi-powered premium analytics",
+  "main": "app.js",
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "pi-sdk-js": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
