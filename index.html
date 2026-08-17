@@ -11,6 +11,9 @@
     content="Track monthly expenses, budgets, spending categories, and Pi transactions in one simple dashboard."
   >
 
+  <!-- Pi Network Foundation SDK -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -18,6 +21,7 @@
 
   <header class="app-header">
     <div class="container header-content">
+
       <div class="brand">
         <div class="brand-icon">π</div>
 
@@ -26,20 +30,47 @@
           <p>Simple monthly expense tracking</p>
         </div>
       </div>
+
+      <div class="auth-area">
+
+        <div id="userProfile" class="user-profile hidden">
+          <span class="user-icon">π</span>
+          <span id="usernameDisplay"></span>
+        </div>
+
+        <button
+          type="button"
+          id="signInButton"
+          class="primary-button"
+        >
+          Sign in with Pi
+        </button>
+
+      </div>
+
     </div>
   </header>
 
   <main class="container">
 
     <section class="welcome">
-      <h2>Monthly Overview</h2>
 
-      <label for="monthSelector">Select month</label>
+      <div>
+        <h2>Monthly Overview</h2>
+        <p id="authStatus" class="auth-status">
+          Sign in with Pi to sync your spending.
+        </p>
+      </div>
 
-      <input
-        type="month"
-        id="monthSelector"
-      >
+      <label for="monthSelector">
+        Select month
+
+        <input
+          type="month"
+          id="monthSelector"
+        >
+      </label>
+
     </section>
 
     <section class="summary-grid">
@@ -51,12 +82,12 @@
 
       <article class="summary-card">
         <span class="summary-label">Monthly Budget</span>
-        <strong id="monthlyBudget">₱0.00</strong>
+        <strong id="monthlyBudget">Not set</strong>
       </article>
 
       <article class="summary-card">
         <span class="summary-label">Remaining</span>
-        <strong id="remainingBudget">₱0.00</strong>
+        <strong id="remainingBudget">—</strong>
       </article>
 
       <article class="summary-card">
@@ -71,6 +102,7 @@
       <div class="panel">
 
         <div class="panel-header">
+
           <div>
             <h2>Expenses</h2>
             <p>Your recent transactions</p>
@@ -83,11 +115,13 @@
           >
             + Add Expense
           </button>
+
         </div>
 
         <div id="expenseList" class="expense-list">
 
           <div class="empty-state">
+
             <div class="empty-icon">₱</div>
 
             <h3>No expenses yet</h3>
@@ -95,6 +129,7 @@
             <p>
               Add your first expense to start tracking your monthly spending.
             </p>
+
           </div>
 
         </div>
@@ -104,10 +139,12 @@
       <div class="panel">
 
         <div class="panel-header">
+
           <div>
             <h2>Spending Categories</h2>
             <p>Where your money goes</p>
           </div>
+
         </div>
 
         <div id="categoryList" class="category-list">
@@ -280,10 +317,12 @@
   </div>
 
   <footer class="app-footer">
+
     <div class="container">
       <p>Pi Monthly Spending</p>
       <span>Track your spending. Manage your budget.</span>
     </div>
+
   </footer>
 
   <script src="app.js"></script>
