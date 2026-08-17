@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Pi Monthly Spending</title>
+
+  <meta
+    name="description"
+    content="Track monthly expenses, budgets, spending categories, and Pi transactions in one simple dashboard."
+  >
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header class="app-header">
+    <div class="container header-content">
+      <div class="brand">
+        <div class="brand-icon">π</div>
+
+        <div>
+          <h1>Pi Monthly Spending</h1>
+          <p>Simple monthly expense tracking</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section class="welcome">
+      <h2>Monthly Overview</h2>
+
+      <label for="monthSelector">Select month</label>
+
+      <input
+        type="month"
+        id="monthSelector"
+      >
+    </section>
+
+    <section class="summary-grid">
+
+      <article class="summary-card">
+        <span class="summary-label">Total Spent</span>
+        <strong id="totalSpent">₱0.00</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Monthly Budget</span>
+        <strong id="monthlyBudget">₱0.00</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Remaining</span>
+        <strong id="remainingBudget">₱0.00</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Transactions</span>
+        <strong id="transactionCount">0</strong>
+      </article>
+
+    </section>
+
+    <section class="dashboard-grid">
+
+      <div class="panel">
+
+        <div class="panel-header">
+          <div>
+            <h2>Expenses</h2>
+            <p>Your recent transactions</p>
+          </div>
+
+          <button
+            type="button"
+            id="addExpenseButton"
+            class="primary-button"
+          >
+            + Add Expense
+          </button>
+        </div>
+
+        <div id="expenseList" class="expense-list">
+
+          <div class="empty-state">
+            <div class="empty-icon">₱</div>
+
+            <h3>No expenses yet</h3>
+
+            <p>
+              Add your first expense to start tracking your monthly spending.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="panel">
+
+        <div class="panel-header">
+          <div>
+            <h2>Spending Categories</h2>
+            <p>Where your money goes</p>
+          </div>
+        </div>
+
+        <div id="categoryList" class="category-list">
+
+          <div class="empty-state small">
+            <p>No category data yet.</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <div
+    id="expenseModal"
+    class="modal hidden"
+    aria-hidden="true"
+  >
+
+    <div class="modal-backdrop"></div>
+
+    <div
+      class="modal-content"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="expenseModalTitle"
+    >
+
+      <div class="modal-header">
+
+        <div>
+          <h2 id="expenseModalTitle">Add Expense</h2>
+          <p>Record a new monthly expense.</p>
+        </div>
+
+        <button
+          type="button"
+          id="closeModalButton"
+          class="close-button"
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <form id="expenseForm">
+
+        <div class="form-group">
+
+          <label for="expenseAmount">
+            Amount
+          </label>
+
+          <input
+            type="number"
+            id="expenseAmount"
+            name="amount"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            required
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="expenseCategory">
+            Category
+          </label>
+
+          <select
+            id="expenseCategory"
+            name="category"
+            required
+          >
+            <option value="">Select a category</option>
+            <option value="Food">🍔 Food</option>
+            <option value="Housing">🏠 Housing</option>
+            <option value="Utilities">💡 Utilities</option>
+            <option value="Transportation">🚗 Transportation</option>
+            <option value="Shopping">🛒 Shopping</option>
+            <option value="Family">👨‍👩‍👦 Family</option>
+            <option value="Technology">💻 Technology</option>
+            <option value="Entertainment">🎮 Entertainment</option>
+            <option value="Bills">💳 Bills</option>
+            <option value="Other">📦 Other</option>
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="expenseDescription">
+            Description
+          </label>
+
+          <input
+            type="text"
+            id="expenseDescription"
+            name="description"
+            maxlength="100"
+            placeholder="e.g. Grocery shopping"
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="expenseDate">
+            Date
+          </label>
+
+          <input
+            type="date"
+            id="expenseDate"
+            name="date"
+            required
+          >
+
+        </div>
+
+        <div class="form-group">
+
+          <label for="paymentMethod">
+            Payment Method
+          </label>
+
+          <select
+            id="paymentMethod"
+            name="paymentMethod"
+          >
+            <option value="Cash">Cash</option>
+            <option value="Bank">Bank</option>
+            <option value="Card">Card</option>
+            <option value="E-wallet">E-wallet</option>
+            <option value="Pi">Pi</option>
+            <option value="Other">Other</option>
+          </select>
+
+        </div>
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            id="cancelExpenseButton"
+            class="secondary-button"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Expense
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+  <footer class="app-footer">
+    <div class="container">
+      <p>Pi Monthly Spending</p>
+      <span>Track your spending. Manage your budget.</span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
