@@ -29,6 +29,7 @@ test("public metadata uses the branded domain", () => {
   const html = read("index.html");
   assert.match(html, /rel="canonical" href="https:\/\/spending\.joshuadelacruz\.solutions\//);
   assert.match(html, /property="og:url" content="https:\/\/spending\.joshuadelacruz\.solutions\//);
+  assert.match(html, /href="https:\/\/joshuadelacruz\.solutions\/"[^>]*>\s*← Main Portfolio\s*<\/a>/);
 });
 
 test("financial data boundary is explicit", () => {
