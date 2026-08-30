@@ -23,6 +23,14 @@ const STORAGE_KEY =
 const BUDGET_KEY =
   "pi-monthly-spending-budget";
 
+/*
+ * Paid entitlements are deliberately disabled until the backend can persist
+ * and verify a 30-day entitlement. This prevents charging for an incomplete
+ * premium capability while preserving the integration code for development.
+ */
+const PREMIUM_PURCHASES_ENABLED =
+  false;
+
 
 const PREMIUM_PRODUCT = Object.freeze({
 
@@ -1095,6 +1103,16 @@ async function authenticateWithPi() {
 
 async function purchasePremiumAnalytics() {
 
+  if (!PREMIUM_PURCHASES_ENABLED) {
+
+    alert(
+      "Premium purchasing is not available yet. Your local expense tracker remains free to use."
+    );
+
+    return;
+
+  }
+
   if (!piInitialized) {
 
     await initializePi();
@@ -1405,15 +1423,17 @@ function updateAuthenticatedUI(
 
 
   authStatus.textContent =
-    `Signed in as @${username}`;
+    `Signed in as @${username}. Expenses remain stored only on this device.`;
 
 
   premiumButton.disabled =
-    false;
+    !PREMIUM_PURCHASES_ENABLED;
 
 
   premiumButton.textContent =
-    "Buy Premium — 1 Pi";
+    PREMIUM_PURCHASES_ENABLED
+      ? "Buy Premium — 1 Pi"
+      : "Premium coming soon";
 
 }
 
@@ -1437,7 +1457,7 @@ function updateAuthError(
 
 
   premiumButton.textContent =
-    "Sign in to purchase";
+    "Premium coming soon";
 
 
   authStatus.textContent =

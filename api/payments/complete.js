@@ -27,12 +27,20 @@ const PREMIUM_PRODUCT = Object.freeze({
 });
 
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") {
 
     return res.status(405).json({
       error: "Method not allowed."
+    });
+
+  }
+
+  if (process.env.PREMIUM_PURCHASES_ENABLED !== "true") {
+
+    return res.status(503).json({
+      error: "Premium purchases are temporarily unavailable."
     });
 
   }
@@ -162,9 +170,6 @@ export default async function handler(req, res) {
           result?.message ||
           "Pi payment completion failed.",
 
-        details:
-          result
-
       });
 
     }
@@ -208,9 +213,6 @@ export default async function handler(req, res) {
         durationDays:
           PREMIUM_PRODUCT.durationDays
       },
-
-      pi:
-        result
 
     });
 

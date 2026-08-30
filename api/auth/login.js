@@ -7,6 +7,9 @@ const crypto =
 const PI_ME_ENDPOINT =
   "https://api.minepi.com/v2/me";
 
+const MAX_ACCESS_TOKEN_LENGTH =
+  4096;
+
 
 function getSessionSecret() {
 
@@ -133,7 +136,9 @@ module.exports =
         typeof accessToken !==
           "string" ||
         accessToken.length ===
-          0
+          0 ||
+        accessToken.length >
+          MAX_ACCESS_TOKEN_LENGTH
       ) {
 
         return res
@@ -167,7 +172,10 @@ module.exports =
 
               Accept:
                 "application/json"
-            }
+            },
+
+            signal:
+              AbortSignal.timeout(5000)
           }
         );
 
@@ -182,8 +190,7 @@ module.exports =
 
         console.error(
           "Pi /v2/me rejected token:",
-          piResponse.status,
-          piData
+          piResponse.status
         );
 
 

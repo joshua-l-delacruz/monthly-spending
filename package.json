@@ -6,10 +6,8 @@
   "main": "app.js",
   "scripts": {
     "start": "vercel dev",
-    "dev": "vercel dev"
-  },
-  "dependencies": {
-    "pi-sdk-js": "^1.0.0"
+    "dev": "vercel dev",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=18"
