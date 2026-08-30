@@ -4,6 +4,8 @@ A privacy-friendly monthly expense tracker for the Pi ecosystem. The current rel
 
 > **Status:** Early portfolio release · local-only storage · no account required
 
+**[Open the live expense tracker](https://spending.joshuadelacruz.solutions/)**
+
 ## Why this project exists
 
 Pi Monthly Spending explores a simple, mobile-friendly way to record expenses, review category totals, and compare spending against a monthly budget. It deliberately starts with local storage before introducing authentication or cloud synchronization.
@@ -55,7 +57,7 @@ Then open the local address shown by the server.
 
 ## Deployment
 
-This project is designed to be deployed through Vercel.
+The public application is available at [spending.joshuadelacruz.solutions](https://spending.joshuadelacruz.solutions/). The static origin is deployed through Vercel and exposed through the branded Cloudflare hostname.
 
 ## Contributing
 
