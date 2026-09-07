@@ -1,10 +1,14 @@
 # Pi Monthly Spending
 
+[![CI](https://github.com/joshua-l-delacruz/monthly-spending/actions/workflows/ci.yml/badge.svg)](https://github.com/joshua-l-delacruz/monthly-spending/actions/workflows/ci.yml)
+
 A privacy-conscious monthly expense tracker for the Pi ecosystem. Financial records remain in the user's browser; optional Pi authentication verifies identity without uploading or synchronizing expense data.
 
 > **Status:** Early portfolio release · local-first financial data · optional Pi identity · premium purchasing disabled
 
 **[Open the live expense tracker](https://spending.joshuadelacruz.solutions/)**
+
+![Pi Monthly Spending local-first dashboard](https://joshuadelacruz.solutions/assets/images/monthly-spending.svg)
 
 ## Recruiter quick view
 

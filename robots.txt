@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://spending.joshuadelacruz.solutions/sitemap.xml
