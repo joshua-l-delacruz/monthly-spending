@@ -7,7 +7,7 @@
   "scripts": {
     "start": "vercel dev",
     "dev": "vercel dev",
-    "test": "node --test tests"
+    "test": "node --test tests/api.test.js tests/source.test.js"
   },
   "engines": {
     "node": ">=18"
